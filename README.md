@@ -90,6 +90,8 @@ Future fix:
   they point to the "runtime" version of `util-linux`.
   For example,
 
+
+
 # When to use `systemd`  vs `systemdMinimal` vs `systemdLibs`
 
 
@@ -100,4 +102,6 @@ Currently `systemd.pc` instructs packages to install systemd units etc into syst
 which obviously doesn't work. Find a smart way to make this work?
 
 
-`util-linux -> lvm2 `
+# Things to do when 258 drops
+
+* We can drop the explicit `gnutls` dependency. as `systemd-resolved` uses `openssl` now
