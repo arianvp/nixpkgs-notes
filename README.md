@@ -1,6 +1,32 @@
 # Circular dependencies
 
-`tpm2-tss -> systemd -> tpm2-tss`
+```
+$ nix why-depends --derivation nixpkgs#systemd  nixpkgs#systemdLibs --all
+/nix/store/2370y84xrb6mf46rjj63zr7ipcrkcyiz-systemd-257.6.drv
+├───/nix/store/a5vbg7z1ci0xnlc6r9b1d9pwznyxijn8-libfido2-1.16.0.drv
+│   ├───/nix/store/kya8fwm8abcrcfdhwfgc7wq8viibp6y7-systemd-minimal-libs-257.6.drv
+│   └───/nix/store/gm64y20jypfi51j7asrvnw944cnbpprl-pcsclite-2.3.0.drv
+│       └───/nix/store/kya8fwm8abcrcfdhwfgc7wq8viibp6y7-systemd-minimal-libs-257.6.drv
+└───/nix/store/pjafn3dksvs6jgx0pkb6jcn5p28w78d0-cryptsetup-2.8.0.drv
+    └───/nix/store/yymh1rn3vc268gjimy43g8ldpaiyrj6p-lvm2-2.03.33.drv
+        └───/nix/store/kya8fwm8abcrcfdhwfgc7wq8viibp6y7-systemd-minimal-libs-257.6.drv
+```
+
+```
+$ nix why-depends --derivation nixpkgs#systemd  nixpkgs#systemdMinimal --all
+/nix/store/2370y84xrb6mf46rjj63zr7ipcrkcyiz-systemd-257.6.drv
+├───/nix/store/a5vbg7z1ci0xnlc6r9b1d9pwznyxijn8-libfido2-1.16.0.drv
+│   ├───/nix/store/0xz72aqjmi62x86afbqzqrb4fdkpqlxw-udev-check-hook.drv
+│   │   └───/nix/store/a3y0fmh0kilz9ynvk2m2zcrdrn4mcadp-systemd-minimal-257.6.drv
+│   └───/nix/store/gm64y20jypfi51j7asrvnw944cnbpprl-pcsclite-2.3.0.drv
+│       └───/nix/store/gxyb7nk6d2b17q3isr4zmmszq9dmly7c-dbus-1.14.10.drv
+│           └───/nix/store/a3y0fmh0kilz9ynvk2m2zcrdrn4mcadp-systemd-minimal-257.6.drv
+└───/nix/store/pjafn3dksvs6jgx0pkb6jcn5p28w78d0-cryptsetup-2.8.0.drv
+    └───/nix/store/yymh1rn3vc268gjimy43g8ldpaiyrj6p-lvm2-2.03.33.drv
+        └───/nix/store/0xz72aqjmi62x86afbqzqrb4fdkpqlxw-udev-check-hook.drv
+```
+
+## `tpm2-tss -> systemd -> tpm2-tss`
 
 tpm2-tss ships with sysusers, tmpfiles and udev rules it wants to install
 but only does that if we have a `systemd` dependency.
@@ -10,7 +36,7 @@ We don't have it depend on `systemd` atm so it falls back to using `useradd` and
 We then do everything in a NixOS module instead
 
 
-`tpm2-tss[test]-> procps -> systemd -> tpm2-tss`
+## `tpm2-tss[test]-> procps -> systemd -> tpm2-tss`
 
 The tests of tpm2-tss depend on procps. procps depends on systemd. systemd depends on tpm2-tss. This creates a loop.
 
@@ -18,15 +44,14 @@ Current fix:  `procps` overriden locally to set `withSystemd = false`
 
 Suggested fix: Move tests into own derivation.
 
-`util-linux -> systemd -> util-linux`
-`systemd -> linux-pam -> systemd`
-`systemd -> util-linux -> linux-pam -> systemd`
+## `util-linux -> systemd -> util-linux` `systemd -> linux-pam -> systemd` `systemd -> util-linux -> linux-pam -> systemd`
 
 ```
 $ nix why-depends --derivation nixpkgs#util-linux nixpkgs#util-linuxMinimal
 /nix/store/8vimrp4862ipgd2g3hi0d4j51jvpwkxc-util-linux-2.41.drv
 └───/nix/store/2370y84xrb6mf46rjj63zr7ipcrkcyiz-systemd-257.6.drv
     └───/nix/store/mncaq3nimi056aqbwnkx5w0vw1gf1p1d-util-linux-minimal-2.41.drv
+```
 
 `util-linux` depends on `systemd` for reasons:
 
@@ -96,32 +121,61 @@ Future fix:
   For example,
 
 
-```
-$ nix why-depends --derivation nixpkgs#systemd  nixpkgs#systemdLibs --all
-/nix/store/2370y84xrb6mf46rjj63zr7ipcrkcyiz-systemd-257.6.drv
-├───/nix/store/a5vbg7z1ci0xnlc6r9b1d9pwznyxijn8-libfido2-1.16.0.drv
-│   ├───/nix/store/kya8fwm8abcrcfdhwfgc7wq8viibp6y7-systemd-minimal-libs-257.6.drv
-│   └───/nix/store/gm64y20jypfi51j7asrvnw944cnbpprl-pcsclite-2.3.0.drv
-│       └───/nix/store/kya8fwm8abcrcfdhwfgc7wq8viibp6y7-systemd-minimal-libs-257.6.drv
-└───/nix/store/pjafn3dksvs6jgx0pkb6jcn5p28w78d0-cryptsetup-2.8.0.drv
-    └───/nix/store/yymh1rn3vc268gjimy43g8ldpaiyrj6p-lvm2-2.03.33.drv
-        └───/nix/store/kya8fwm8abcrcfdhwfgc7wq8viibp6y7-systemd-minimal-libs-257.6.drv
-```
+## `systemd -> cryptsetup -> lvm2 -> systemd`
+## `systemd -> cryptsetup -> lvm2 -> util-linux -> systemd`
 
-```
-$ nix why-depends --derivation nixpkgs#systemd  nixpkgs#systemdMinimal --all
-/nix/store/2370y84xrb6mf46rjj63zr7ipcrkcyiz-systemd-257.6.drv
-├───/nix/store/a5vbg7z1ci0xnlc6r9b1d9pwznyxijn8-libfido2-1.16.0.drv
-│   ├───/nix/store/0xz72aqjmi62x86afbqzqrb4fdkpqlxw-udev-check-hook.drv
-│   │   └───/nix/store/a3y0fmh0kilz9ynvk2m2zcrdrn4mcadp-systemd-minimal-257.6.drv
-│   └───/nix/store/gm64y20jypfi51j7asrvnw944cnbpprl-pcsclite-2.3.0.drv
-│       └───/nix/store/gxyb7nk6d2b17q3isr4zmmszq9dmly7c-dbus-1.14.10.drv
-│           └───/nix/store/a3y0fmh0kilz9ynvk2m2zcrdrn4mcadp-systemd-minimal-257.6.drv
-└───/nix/store/pjafn3dksvs6jgx0pkb6jcn5p28w78d0-cryptsetup-2.8.0.drv
-    └───/nix/store/yymh1rn3vc268gjimy43g8ldpaiyrj6p-lvm2-2.03.33.drv
-        └───/nix/store/0xz72aqjmi62x86afbqzqrb4fdkpqlxw-udev-check-hook.drv
-```
+Systemd depends on `libcrypsetup`
 
+`cryptsetup` depends on `systemd` because of `tmpfiles` and `systemd.pc` to create `/run/cryptsetup` with
+right permissions. We solve this by just not using that feature
+
+`cryptsetup` depends on `lvm2` because it uses `libdevmapper`
+
+
+`lvm2` depends on `systemd` because:
+* `libdevmapper` uses `libudev`
+* `lvm2` daemons use all the `libsystemd` bells and whistles (THOUGH we just accidentally enable that due to pulling in `udev` alias I think)
+*  udev rules are installed according to `systemd.pc`
+
+`lvm2` depends on `util-linux` because `blkdeactivate` depends on a bunch of binaries from `util-linux` (`mount`, `umount`, `mountpoint` etc)
+
+`blkdeactivate` is a huge shell scrip that is (unfortunately) part of the `device-mapper` sub-package which we patch to contain paths to the `util-linux` package instead of `/sbin`.
+
+
+**NOTE** bootup implictly depends on the udev rules of `lvm2` https://gitlab.com/lvmteam/lvm2/-/blob/main/udev/Makefile.in#L55
+without these udev rules your system won't boot properly
+
+Current fix:
+  `lvm2` depends on `systemdLibs` (through `udev`) input
+  `lvm2` is patched to point to `util-linuxMinimal`
+
+
+Suggested fix:
+
+* `blkdeactivate` could just read its binaries from `PATH`. `util-linux` is available anyway.
+  This removes the explicit dependency on `uti-linux` and breaks the loop.
+
+
+Closure reduction fix:
+Split up in two packages `device-mapper` and `lvm2`:
+* `device-mapper`  just the minimum stuff libdevmapper.so and the udev rules. Without the rest of lvm2. Explicitly supported by upstream (`make device-mapper && make install_device-mapper` )
+
+* `lvm2` a lot more other daemons that most people don't need. (`make lvm2 && make install_lvm2`) and can just depend on the normal `util-linux`
+
+
+
+
+
+
+
+
+
+## `systemd -> libfido2 -> systemd`
+
+Systemd depends on `libfido2` to provide a crypsetup plugin.
+`libfido2` depends on `libudev`
+
+Cycles is broken by having `libfido2` depend on `systemdLibs`
 
 # `systemd`  vs `systemdMinimal` vs `systemdLibs`
 
