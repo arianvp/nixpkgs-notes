@@ -118,7 +118,9 @@ Sidenote about shadow/util-linux weirdness:
 Future fix:
 * We should probably point all these paths to `/run/current-system/sw/bin` so
   they point to the "runtime" version of `util-linux`.
-  For example,
+  For example
+
+* Starting 258, we can remove the `systemdLibs- > util-linuxMinimal` dependency with setting `-Dlibmount=false` https://github.com/systemd/systemd/pull/37738
 
 
 ## `systemd -> cryptsetup -> lvm2 -> systemd`
