@@ -22,6 +22,12 @@ Suggested fix: Move tests into own derivation.
 `systemd -> linux-pam -> systemd`
 `systemd -> util-linux -> linux-pam -> systemd`
 
+```
+$ nix why-depends --derivation nixpkgs#util-linux nixpkgs#util-linuxMinimal
+/nix/store/8vimrp4862ipgd2g3hi0d4j51jvpwkxc-util-linux-2.41.drv
+└───/nix/store/2370y84xrb6mf46rjj63zr7ipcrkcyiz-systemd-257.6.drv
+    └───/nix/store/mncaq3nimi056aqbwnkx5w0vw1gf1p1d-util-linux-minimal-2.41.drv
+
 `util-linux` depends on `systemd` for reasons:
 
 * To load `systemdsystemunitdir`, `sysuser_dir` and `tmpfiles_dir` from `systemd.pc`
@@ -84,16 +90,45 @@ Sidenote about shadow/util-linux weirdness:
 *  We ship `${shadow}/bin/nologin` in /run/current-system/sw/bin even-though we configure systemd to use `${util-linux}/bin/nologin`
 
 
-
 Future fix:
 * We should probably point all these paths to `/run/current-system/sw/bin` so
   they point to the "runtime" version of `util-linux`.
   For example,
 
 
+```
+$ nix why-depends --derivation nixpkgs#systemd  nixpkgs#systemdLibs --all
+/nix/store/2370y84xrb6mf46rjj63zr7ipcrkcyiz-systemd-257.6.drv
+├───/nix/store/a5vbg7z1ci0xnlc6r9b1d9pwznyxijn8-libfido2-1.16.0.drv
+│   ├───/nix/store/kya8fwm8abcrcfdhwfgc7wq8viibp6y7-systemd-minimal-libs-257.6.drv
+│   └───/nix/store/gm64y20jypfi51j7asrvnw944cnbpprl-pcsclite-2.3.0.drv
+│       └───/nix/store/kya8fwm8abcrcfdhwfgc7wq8viibp6y7-systemd-minimal-libs-257.6.drv
+└───/nix/store/pjafn3dksvs6jgx0pkb6jcn5p28w78d0-cryptsetup-2.8.0.drv
+    └───/nix/store/yymh1rn3vc268gjimy43g8ldpaiyrj6p-lvm2-2.03.33.drv
+        └───/nix/store/kya8fwm8abcrcfdhwfgc7wq8viibp6y7-systemd-minimal-libs-257.6.drv
+```
 
-# When to use `systemd`  vs `systemdMinimal` vs `systemdLibs`
+```
+$ nix why-depends --derivation nixpkgs#systemd  nixpkgs#systemdMinimal --all
+/nix/store/2370y84xrb6mf46rjj63zr7ipcrkcyiz-systemd-257.6.drv
+├───/nix/store/a5vbg7z1ci0xnlc6r9b1d9pwznyxijn8-libfido2-1.16.0.drv
+│   ├───/nix/store/0xz72aqjmi62x86afbqzqrb4fdkpqlxw-udev-check-hook.drv
+│   │   └───/nix/store/a3y0fmh0kilz9ynvk2m2zcrdrn4mcadp-systemd-minimal-257.6.drv
+│   └───/nix/store/gm64y20jypfi51j7asrvnw944cnbpprl-pcsclite-2.3.0.drv
+│       └───/nix/store/gxyb7nk6d2b17q3isr4zmmszq9dmly7c-dbus-1.14.10.drv
+│           └───/nix/store/a3y0fmh0kilz9ynvk2m2zcrdrn4mcadp-systemd-minimal-257.6.drv
+└───/nix/store/pjafn3dksvs6jgx0pkb6jcn5p28w78d0-cryptsetup-2.8.0.drv
+    └───/nix/store/yymh1rn3vc268gjimy43g8ldpaiyrj6p-lvm2-2.03.33.drv
+        └───/nix/store/0xz72aqjmi62x86afbqzqrb4fdkpqlxw-udev-check-hook.drv
+```
 
+
+# `systemd`  vs `systemdMinimal` vs `systemdLibs`
+
+When to use which? Why does `systemdMinimal` exist? Audit usages?
+
+* one thing that we need to be very careful with is that `sd_path` is a thing and as soon as anything
+depends on it things might go wrong. It's basically the same problem as `systemd.pc`
 
 
 # How can we make `systemd.pc` do the right thing?
