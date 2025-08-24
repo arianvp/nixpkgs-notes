@@ -104,4 +104,6 @@ which obviously doesn't work. Find a smart way to make this work?
 
 # Things to do when 258 drops
 
-* We can drop the explicit `gnutls` dependency. as `systemd-resolved` uses `openssl` now
+* We can drop the explicit `gnutls` dependency. as `systemd-resolved` uses
+  `openssl` now. `journal-remote` still depends on it through `libmicrohttpd`
+  though.
